@@ -1,0 +1,159 @@
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+// --- CSV Export ---
+export const exportToCSV = (data) => {
+    if (!data) return;
+
+    const {
+        patient_id,
+        drug,
+        risk_assessment,
+        pharmacogenomic_profile,
+        clinical_recommendation
+    } = data;
+
+    const rows = [
+        ['PharmaGuard Analysis Report'],
+        ['Patient ID', patient_id],
+        ['Drug', drug],
+        ['Risk Level', risk_assessment.risk_label],
+        ['Confidence', `${(risk_assessment.confidence_score * 100).toFixed(0)}%`],
+        ['Gene', pharmacogenomic_profile.primary_gene],
+        ['Diplotype', pharmacogenomic_profile.diplotype],
+        ['Phenotype', pharmacogenomic_profile.phenotype],
+        [],
+        ['Clinical Recommendation'],
+        ['Action', clinical_recommendation.action],
+        ['Dosing Adjustment', clinical_recommendation.dosing_adjustment],
+        ['Monitoring', clinical_recommendation.monitoring],
+        [],
+        ['Detected Variants'],
+        ['rsID', 'Gene', 'Star Allele']
+    ];
+
+    pharmacogenomic_profile.detected_variants.forEach(v => {
+        rows.push([v.rsid, v.gene, v.star]);
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," +
+        rows.map(e => e.map(cell => `"${cell || ''}"`).join(",")).join("\n");
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `pharmaguard_${drug}_${patient_id}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// --- PDF Export ---
+export const exportToPDF = (data) => {
+    if (!data) return;
+
+    const doc = new jsPDF();
+    const themeColor = [34, 197, 94]; // Green default
+
+    // Set color based on risk
+    let riskColor = [107, 114, 128]; // Grey
+    const risk = data.risk_assessment.risk_label;
+    if (risk === 'Toxic') riskColor = [239, 68, 68]; // Red
+    else if (risk === 'Adjust Dosage') riskColor = [234, 179, 8]; // Yellow
+    else if (risk === 'Safe') riskColor = [34, 197, 94]; // Green
+    else if (risk === 'Ineffective') riskColor = [249, 115, 22]; // Orange
+
+    // Header
+    doc.setFillColor(245, 245, 245);
+    doc.rect(0, 0, 210, 40, 'F');
+    doc.setFontSize(22);
+    doc.setTextColor(30, 30, 30);
+    doc.text('PharmaGuard', 15, 20);
+    doc.setFontSize(12);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Pharmacogenomics Analysis Report', 15, 28);
+
+    // Patient Info
+    doc.setFontSize(10);
+    doc.setTextColor(50, 50, 50);
+    doc.text(`Patient ID: ${data.patient_id}`, 150, 20, { align: 'right' });
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 28, { align: 'right' });
+
+    let y = 50;
+
+    // Risk Section
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Analysis for: ${data.drug}`, 15, y);
+
+    y += 10;
+    doc.setFillColor(...riskColor);
+    doc.roundedRect(15, y, 180, 12, 1, 1, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(12);
+    doc.text(`RISK LEVEL: ${risk.toUpperCase()}`, 105, y + 8, { align: 'center' });
+
+    y += 20;
+
+    // Profile Table
+    autoTable(doc, {
+        startY: y,
+        head: [['Gene', 'Diplotype', 'Phenotype', 'Confidence']],
+        body: [[
+            data.pharmacogenomic_profile.primary_gene,
+            data.pharmacogenomic_profile.diplotype,
+            data.pharmacogenomic_profile.phenotype,
+            `${(data.risk_assessment.confidence_score * 100).toFixed(0)}%`
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [50, 50, 50] },
+        styles: { fontSize: 10 }
+    });
+
+    y = doc.lastAutoTable.finalY + 15;
+
+    // Clinical Recommendation
+    doc.setFontSize(14);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Clinical Recommendation', 15, y);
+    y += 5;
+
+    autoTable(doc, {
+        startY: y,
+        body: [
+            ['Action', data.clinical_recommendation.action],
+            ['Dosing Adjustment', data.clinical_recommendation.dosing_adjustment],
+            ['Monitoring', data.clinical_recommendation.monitoring]
+        ],
+        theme: 'plain',
+        columnStyles: { 0: { fontStyle: 'bold', cellWidth: 50 }, 1: { cellWidth: 'auto' } }
+    });
+
+    y = doc.lastAutoTable.finalY + 15;
+
+    // Detected Variants
+    if (data.pharmacogenomic_profile.detected_variants.length > 0) {
+        doc.setFontSize(14);
+        doc.text('Detected Variants', 15, y);
+        y += 5;
+
+        const variantRows = data.pharmacogenomic_profile.detected_variants.map(v => [v.rsid, v.gene, v.star]);
+        autoTable(doc, {
+            startY: y,
+            head: [['rsID', 'Gene', 'Star Allele']],
+            body: variantRows,
+            theme: 'striped',
+            headStyles: { fillColor: [100, 100, 100] }
+        });
+        y = doc.lastAutoTable.finalY + 15;
+    }
+
+    // Disclaimer
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    const disclaimer = "Disclaimer: This report is generated by an AI system (PharmaGuard) and is for research purposes only. " +
+        "It is not a substitute for professional medical advice, diagnosis, or treatment.";
+    doc.text(disclaimer, 105, 280, { align: 'center', maxWidth: 180 });
+
+    doc.save(`pharmaguard_${data.drug}_${data.patient_id}.pdf`);
+};
