@@ -94,6 +94,9 @@ Be specific. Cite the rsID variants. Use clinical terminology but stay accessibl
             return json.loads(json_match)
 
     except Exception as e:
+        # Log the error for debugging in deployment environments
+        print(f"ERROR: Groq API Explanation failed: {str(e)}")
+        
         # Return a fallback explanation if API fails
         return {
             "summary": f"Patient carries {diplotype} diplotype in {gene}, classified as {phenotype}. "
