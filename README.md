@@ -1,3 +1,12 @@
+---
+title: PharmaGuard
+emoji: 🧬
+colorFrom: green
+colorTo: blue
+sdk: docker
+pinned: false
+---
+
 # PharmaGuard 🧬
 
 **AI-Powered Pharmacogenomics Analysis Platform**
