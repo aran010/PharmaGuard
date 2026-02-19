@@ -12,6 +12,8 @@ from typing import Optional
 from dotenv import load_dotenv
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from vcf_parser import parse_vcf_content, group_variants_by_gene, infer_diplotype
 from risk_engine import assess_risk, GENE_DRUG_MAP, SUPPORTED_DRUGS
@@ -232,6 +234,17 @@ def _build_response(
         },
     }
 
+
+# Serving Frontend Static Files
+# In production (Docker), static files are built into the 'static' directory
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="static")
+
+    # SPA Fallback: Serve index.html for any unknown routes
+    @app.exception_handler(404)
+    async def spa_fallback(request, exc):
+        return FileResponse(os.path.join(static_dir, "index.html"))
 
 if __name__ == "__main__":
     import uvicorn

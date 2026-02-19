@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import './App.css'
 import { exportToCSV, exportToPDF } from './utils/export'
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000'
+const API_BASE = import.meta.env.VITE_API_URL || ''
 
 const SUPPORTED_DRUGS = [
   'CODEINE',
