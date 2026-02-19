@@ -17,7 +17,7 @@ from fastapi.responses import FileResponse
 
 from vcf_parser import parse_vcf_content, group_variants_by_gene, infer_diplotype
 from risk_engine import assess_risk, GENE_DRUG_MAP, SUPPORTED_DRUGS
-from ollama_integration import generate_clinical_explanation
+from groq_integration import generate_clinical_explanation
 
 load_dotenv()
 
@@ -43,7 +43,7 @@ async def health_check():
         "status": "healthy",
         "service": "PharmaGuard API",
         "version": "1.0.0",
-        "llm_provider": "Ollama (local)"
+        "llm_provider": "Groq Cloud API"
     }
 
 
